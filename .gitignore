@@ -1,0 +1,15 @@
+node_modules
+dist
+.next
+out
+coverage
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea
+.vscode
+.agents
+.claude
+skills-lock.json
