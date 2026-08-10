@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api, ApiError } from '@/lib/api';
+import { Spinner } from '@/components/spinner';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -45,8 +46,9 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-lg bg-brand-600 py-2 font-medium text-white disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2 font-medium text-white disabled:opacity-50"
             >
+              {submitting && <Spinner className="h-4 w-4" />}
               {submitting ? 'Sending…' : 'Send reset link'}
             </button>
             <a className="block text-center text-sm text-brand-600 underline" href="/login">

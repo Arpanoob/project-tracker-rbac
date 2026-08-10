@@ -75,11 +75,21 @@ export class MailService {
       },
     });
 
-    await transporter.sendMail({
-      from: this.from,
-      to: mail.to,
-      subject: mail.subject,
-      text: mail.text,
-    });
+    try {
+      const info = await transporter.sendMail({
+        from: this.from,
+        to: mail.to,
+        subject: mail.subject,
+        text: mail.text,
+      });
+      this.logger.log(
+        `[MAIL:smtp] sent to=${mail.to} from="${this.from}" id=${info.messageId} accepted=${info.accepted?.length ?? 0}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `[MAIL:smtp] FAILED to=${mail.to} from="${this.from}": ${(err as Error).message}`,
+      );
+      throw err;
+    }
   }
 }

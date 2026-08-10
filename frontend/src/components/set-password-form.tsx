@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
+import { Spinner } from '@/components/spinner';
 
 export function SetPasswordForm({ mode }: { mode: 'set' | 'reset' }) {
   const router = useRouter();
@@ -88,9 +89,10 @@ export function SetPasswordForm({ mode }: { mode: 'set' | 'reset' }) {
         <button
           type="submit"
           disabled={submitting || tokenValid === null}
-          className="w-full rounded-lg bg-brand-600 py-2 font-medium text-white disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2 font-medium text-white disabled:opacity-50"
         >
-          {submitting ? 'Saving…' : 'Save password'}
+          {(submitting || tokenValid === null) && <Spinner className="h-4 w-4" />}
+          {submitting ? 'Saving…' : tokenValid === null ? 'Verifying link…' : 'Save password'}
         </button>
       </form>
     </div>

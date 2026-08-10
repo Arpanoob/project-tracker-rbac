@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { Spinner } from '@/components/spinner';
 
 const DEMO_ACCOUNTS = [
   { role: 'Admin', email: 'admin@tracker.dev' },
@@ -102,7 +103,12 @@ function LoginForm() {
             />
           </div>
 
-          <button type="submit" className="btn-primary w-full" disabled={submitting}>
+          <button
+            type="submit"
+            className="btn-primary flex w-full items-center justify-center gap-2"
+            disabled={submitting}
+          >
+            {submitting && <Spinner className="h-4 w-4" />}
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
 
