@@ -28,6 +28,7 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [invitingId, setInvitingId] = useState<string | null>(null);
 
   async function load() {
     const data = await api.get<User[]>('/users');
@@ -75,6 +76,18 @@ export default function UsersPage() {
       setError(err instanceof ApiError ? err.message : 'Unable to save user');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleResendInvite(user: User) {
+    setInvitingId(user.id);
+    try {
+      await api.post(`/users/${user.id}/resend-invite`);
+      alert(`Invite re-sent to ${user.email}`);
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'Unable to resend invite');
+    } finally {
+      setInvitingId(null);
     }
   }
 
@@ -128,6 +141,9 @@ export default function UsersPage() {
                         {initials(user.name)}
                       </div>
                       <span className="font-medium">{user.name}</span>
+                      {user.pending && (
+                        <span className="badge bg-amber-100 text-amber-700">Pending</span>
+                      )}
                     </div>
                   </td>
                   <td className="hidden px-4 py-3 text-slate-500 sm:table-cell">{user.email}</td>
@@ -136,6 +152,22 @@ export default function UsersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      {user.pending && (
+                        <button
+                          className="btn-ghost !px-2 !py-1 text-sm disabled:opacity-40"
+                          onClick={() => handleResendInvite(user)}
+                          disabled={invitingId === user.id}
+                        >
+                          {invitingId === user.id ? (
+                            <span className="flex items-center gap-1.5">
+                              <Spinner className="h-3.5 w-3.5" />
+                              Sending…
+                            </span>
+                          ) : (
+                            'Resend invite'
+                          )}
+                        </button>
+                      )}
                       <button
                         className="btn-ghost !px-2 !py-1 text-sm"
                         onClick={() => openEdit(user)}

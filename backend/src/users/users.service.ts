@@ -29,11 +29,17 @@ export class UsersService {
     private readonly mail: MailService,
   ) {}
 
-  findAll() {
-    return this.prisma.user.findMany({
-      select: publicUserSelect,
+  async findAll() {
+    const users = await this.prisma.user.findMany({
+      select: { ...publicUserSelect, passwordHash: true },
       orderBy: { createdAt: 'asc' },
     });
+
+    // Expose a "pending" flag (no password set yet) without leaking the hash.
+    return users.map(({ passwordHash, ...user }) => ({
+      ...user,
+      pending: passwordHash === null,
+    }));
   }
 
   directory() {
@@ -77,6 +83,23 @@ export class UsersService {
     await this.mail.sendInvite(user.email, user.name, rawToken);
 
     return user;
+  }
+
+  async resendInvite(id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.passwordHash) {
+      throw new BadRequestException('This user has already set their password');
+    }
+
+    const rawToken = await this.tokens.issue(user.id, TokenType.INVITE);
+    await this.mail.sendInvite(user.email, user.name, rawToken);
+
+    return { message: 'Invite email sent' };
   }
 
   async update(id: string, dto: UpdateUserDto) {
