@@ -33,6 +33,7 @@ export async function resetDatabase(prisma: PrismaService) {
   await prisma.task.deleteMany();
   await prisma.projectMember.deleteMany();
   await prisma.project.deleteMany();
+  await prisma.passwordToken.deleteMany();
   await prisma.user.deleteMany();
 }
 
