@@ -59,8 +59,8 @@ describe('Invite flow (e2e)', () => {
       .expect(201);
 
     const list = await server().get('/api/users').set('Cookie', adminCookie).expect(200);
-    const nina = list.body.find((u: { email: string }) => u.email === 'nina@test.dev');
-    const admin = list.body.find((u: { email: string }) => u.email === 'admin@test.dev');
+    const nina = list.body.data.find((u: { email: string }) => u.email === 'nina@test.dev');
+    const admin = list.body.data.find((u: { email: string }) => u.email === 'admin@test.dev');
     expect(nina.pending).toBe(true);
     expect(admin.pending).toBe(false);
     expect(nina).not.toHaveProperty('passwordHash');

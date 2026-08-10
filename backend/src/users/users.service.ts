@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { PasswordTokenService } from '../auth/password-token.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 const publicUserSelect = {
@@ -29,17 +30,36 @@ export class UsersService {
     private readonly mail: MailService,
   ) {}
 
-  async findAll() {
-    const users = await this.prisma.user.findMany({
-      select: { ...publicUserSelect, passwordHash: true },
-      orderBy: { createdAt: 'asc' },
-    });
+  async findAll(query: ListUsersDto) {
+    const { search, page, pageSize } = query;
+
+    const where: Prisma.UserWhereInput = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+
+    const [rows, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        select: { ...publicUserSelect, passwordHash: true },
+        orderBy: { createdAt: 'asc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
 
     // Expose a "pending" flag (no password set yet) without leaking the hash.
-    return users.map(({ passwordHash, ...user }) => ({
+    const data = rows.map(({ passwordHash, ...user }) => ({
       ...user,
       pending: passwordHash === null,
     }));
+
+    return { data, total, page, pageSize };
   }
 
   directory() {

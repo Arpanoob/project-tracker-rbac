@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
 import { Spinner } from '@/components/spinner';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
-import type { Role, User } from '@/lib/types';
+import type { Paginated, Role, User } from '@/lib/types';
 import { initials, ROLE_STYLES } from '@/lib/ui';
 
 const ROLES: Role[] = ['ADMIN', 'MANAGER', 'MEMBER'];
@@ -29,16 +29,33 @@ export default function UsersPage() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [invitingId, setInvitingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 10;
 
-  async function load() {
-    const data = await api.get<User[]>('/users');
-    setUsers(data);
+  const load = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (search.trim()) params.set('search', search.trim());
+    const res = await api.get<Paginated<User>>(`/users?${params.toString()}`);
+    setUsers(res.data);
+    setTotal(res.total);
     setLoading(false);
-  }
+  }, [page, search]);
 
+  // Debounce search + reload when page/search changes.
   useEffect(() => {
-    load();
-  }, []);
+    const t = setTimeout(load, 250);
+    return () => clearTimeout(t);
+  }, [load]);
+
+  // Reset to first page whenever the search term changes.
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   function openCreate() {
     setForm(emptyForm);
@@ -116,6 +133,16 @@ export default function UsersPage() {
         }
       />
 
+      <div className="mb-4">
+        <input
+          type="search"
+          className="input max-w-xs"
+          placeholder="Search by name or email…"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </div>
+
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <Spinner className="h-4 w-4" />
@@ -192,8 +219,39 @@ export default function UsersPage() {
                   </td>
                 </tr>
               ))}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">
+                    No users match your search.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!loading && total > 0 && (
+        <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+          <span>
+            Page {page} of {totalPages} · {total} users
+          </span>
+          <div className="flex gap-2">
+            <button
+              className="btn-ghost !px-3 !py-1 disabled:opacity-40"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              Previous
+            </button>
+            <button
+              className="btn-ghost !px-3 !py-1 disabled:opacity-40"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
 

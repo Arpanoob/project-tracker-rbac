@@ -71,8 +71,25 @@ describe('RBAC (e2e)', () => {
         .set('Cookie', adminCookie)
         .expect(200);
 
-      expect(response.body).toHaveLength(4);
-      expect(response.body[0]).not.toHaveProperty('passwordHash');
+      expect(response.body.total).toBe(4);
+      expect(response.body.data).toHaveLength(4);
+      expect(response.body.data[0]).not.toHaveProperty('passwordHash');
+    });
+
+    it('paginates and searches the user list', async () => {
+      const firstPage = await server()
+        .get('/api/users?page=1&pageSize=2')
+        .set('Cookie', adminCookie)
+        .expect(200);
+      expect(firstPage.body.data).toHaveLength(2);
+      expect(firstPage.body.total).toBe(4);
+
+      const search = await server()
+        .get('/api/users?search=manager')
+        .set('Cookie', adminCookie)
+        .expect(200);
+      expect(search.body.data).toHaveLength(1);
+      expect(search.body.data[0].email).toBe('manager@test.dev');
     });
 
     it('forbids a manager from listing users', () => {

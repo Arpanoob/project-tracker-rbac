@@ -18,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/projects', label: 'Projects', roles: ['ADMIN', 'MANAGER', 'MEMBER'] },
   { href: '/tasks', label: 'Tasks', roles: ['ADMIN', 'MANAGER', 'MEMBER'] },
   { href: '/users', label: 'Users', roles: ['ADMIN'] },
+  { href: '/audit', label: 'Audit log', roles: ['ADMIN'] },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
