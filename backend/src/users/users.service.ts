@@ -4,9 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, TokenType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
+import { PasswordTokenService } from '../auth/password-token.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -21,7 +23,11 @@ const publicUserSelect = {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tokens: PasswordTokenService,
+    private readonly mail: MailService,
+  ) {}
 
   findAll() {
     return this.prisma.user.findMany({
@@ -57,17 +63,20 @@ export class UsersService {
       throw new ConflictException('A user with that email already exists');
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, 10);
-
-    return this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         name: dto.name,
         email: dto.email,
         role: dto.role,
-        passwordHash,
+        passwordHash: null,
       },
       select: publicUserSelect,
     });
+
+    const rawToken = await this.tokens.issue(user.id, TokenType.INVITE);
+    await this.mail.sendInvite(user.email, user.name, rawToken);
+
+    return user;
   }
 
   async update(id: string, dto: UpdateUserDto) {
