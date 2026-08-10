@@ -5,6 +5,7 @@ import { Suspense, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { Spinner } from '@/components/spinner';
+import { PasswordInput } from '@/components/password-input';
 
 const DEMO_ACCOUNTS = [
   { role: 'Admin', email: 'admin@tracker.dev' },
@@ -92,10 +93,8 @@ function LoginForm() {
             <label className="label" htmlFor="password">
               Password
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              className="input"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"

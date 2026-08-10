@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { Spinner } from '@/components/spinner';
+import { PasswordInput } from '@/components/password-input';
 
 export function SetPasswordForm({ mode }: { mode: 'set' | 'reset' }) {
   const router = useRouter();
@@ -69,16 +70,14 @@ export function SetPasswordForm({ mode }: { mode: 'set' | 'reset' }) {
     <div className="w-full max-w-md">
       <h1 className="mb-6 text-center text-2xl font-semibold">{heading}</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="password"
+        <PasswordInput
           placeholder="New password"
           className="w-full rounded-lg border px-3 py-2"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <input
-          type="password"
+        <PasswordInput
           placeholder="Confirm password"
           className="w-full rounded-lg border px-3 py-2"
           value={confirm}
