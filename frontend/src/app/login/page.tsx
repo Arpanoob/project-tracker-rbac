@@ -28,6 +28,7 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const justReset = params.get('reset') === '1';
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -62,6 +63,11 @@ function LoginForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-4 p-6">
+          {justReset && (
+            <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              Password saved. Please sign in.
+            </div>
+          )}
           {error && (
             <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
           )}
@@ -99,6 +105,13 @@ function LoginForm() {
           <button type="submit" className="btn-primary w-full" disabled={submitting}>
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
+
+          <a
+            href="/forgot-password"
+            className="block text-center text-sm text-brand-600 underline"
+          >
+            Forgot password?
+          </a>
         </form>
 
         <div className="mt-6 card p-4">

@@ -64,7 +64,11 @@ export default function UsersPage() {
         if (form.password) body.password = form.password;
         await api.patch(`/users/${modal.editing.id}`, body);
       } else {
-        await api.post('/users', form);
+        await api.post('/users', {
+          name: form.name,
+          email: form.email,
+          role: form.role,
+        });
       }
       setModal({ open: false });
       await load();
@@ -178,19 +182,24 @@ export default function UsersPage() {
               required
             />
           </div>
-          <div>
-            <label className="label">
-              Password {modal.editing && <span className="text-slate-400">(leave blank to keep)</span>}
-            </label>
-            <input
-              type="password"
-              className="input"
-              value={form.password}
-              onChange={(event) => setForm({ ...form, password: event.target.value })}
-              required={!modal.editing}
-              minLength={form.password ? 8 : undefined}
-            />
-          </div>
+          {modal.editing ? (
+            <div>
+              <label className="label">
+                Password <span className="text-slate-400">(leave blank to keep)</span>
+              </label>
+              <input
+                type="password"
+                className="input"
+                value={form.password}
+                onChange={(event) => setForm({ ...form, password: event.target.value })}
+                minLength={form.password ? 8 : undefined}
+              />
+            </div>
+          ) : (
+            <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-700">
+              An invite email will be sent so they can set their own password.
+            </p>
+          )}
           <div>
             <label className="label">Role</label>
             <select
