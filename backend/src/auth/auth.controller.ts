@@ -1,9 +1,18 @@
 import { Body, Controller, Get, HttpCode, Post, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { CookieOptions, Response } from 'express';
 import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+const cookieOptions: CookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax',
+  path: '/',
+};
 
 @Controller('auth')
 export class AuthController {
@@ -16,11 +25,8 @@ export class AuthController {
     const { token, user } = await this.authService.validateAndSign(dto);
 
     res.cookie('access_token', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      ...cookieOptions,
       maxAge: 1000 * 60 * 60 * 24,
-      path: '/',
     });
 
     return { user };
@@ -29,7 +35,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(200)
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('access_token', { path: '/' });
+    res.clearCookie('access_token', cookieOptions);
     return { message: 'Logged out' };
   }
 

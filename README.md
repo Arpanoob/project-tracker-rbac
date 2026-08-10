@@ -114,6 +114,38 @@ Try logging in as each role to see the navigation, pages, and available actions 
 
 ---
 
+## Deployment (free hosting)
+
+The app runs entirely on free tiers: **Vercel** (frontend), **Render** (backend), and **Neon** (PostgreSQL).
+
+### 1. Database — Neon
+
+1. Create a project at [neon.tech](https://neon.tech).
+2. Copy the connection string (it looks like `postgresql://user:pass@ep-xxx.aws.neon.tech/dbname?sslmode=require`).
+
+### 2. Backend — Render
+
+Render reads `render.yaml`, so you can deploy it as a Blueprint:
+
+1. Push this repo to GitHub, then in Render choose **New → Blueprint** and pick the repo.
+2. Set the two secret env vars when prompted:
+   - `DATABASE_URL` — the Neon connection string from step 1.
+   - `CLIENT_ORIGIN` — your Vercel URL (e.g. `https://your-app.vercel.app`). You can fill this after step 3 and redeploy.
+3. Render builds, runs `prisma migrate deploy`, and starts the API. Seed the demo data once from the service **Shell**: `npm run db:seed`.
+
+The backend URL will look like `https://rbac-tracker-api.onrender.com`. The free instance sleeps after ~15 min idle, so the first request after a pause takes ~30–50s to wake.
+
+### 3. Frontend — Vercel
+
+1. In Vercel, **Import** the repo and set the **Root Directory** to `frontend`.
+2. Add one environment variable:
+   - `NEXT_PUBLIC_API_URL` = `https://rbac-tracker-api.onrender.com/api`
+3. Deploy. Then go back to Render and make sure `CLIENT_ORIGIN` matches the deployed Vercel domain exactly, and redeploy the backend.
+
+### Why the production cookie settings differ
+
+In production the frontend and backend live on different domains, so the auth cookie is issued with `SameSite=None; Secure` and CORS is locked to `CLIENT_ORIGIN` with credentials enabled. Locally (same `localhost`) it stays `SameSite=Lax`. `trust proxy` is enabled in production so the `Secure` cookie is honoured behind Render's proxy. No code changes are needed between environments — it keys off `NODE_ENV`.
+
 ## Tests
 
 The backend ships with an end-to-end test suite (Jest + Supertest) that boots the real Nest application and asserts every RBAC rule over HTTP — role checks *and* ownership checks.
