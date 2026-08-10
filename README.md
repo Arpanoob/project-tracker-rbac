@@ -184,9 +184,11 @@ All routes are prefixed with `/api`. Every route except `POST /auth/login` requi
 | `POST /auth/forgot-password` | Request a reset link (always 200, no enumeration) | public |
 | `POST /auth/set-password` | Set a password using an invite/reset token | public |
 | `GET /auth/token/:token` | Check whether an invite/reset token is still valid | public |
-| `GET /users` | List users | Admin |
+| `GET /users` | List users (supports `?search=&page=&pageSize=`) | Admin |
 | `GET /users/directory` | Minimal user list for assignment | Admin, Manager |
 | `POST /users` | Create user (sends an invite email; no password) | Admin |
+| `POST /users/:id/resend-invite` | Re-send an invite to a pending user | Admin |
+| `GET /audit-logs` | Paginated activity log of all mutations | Admin |
 | `PATCH /users/:id` | Update user | Admin |
 | `DELETE /users/:id` | Delete user | Admin |
 | `GET /projects` | Projects visible to the caller | any |
@@ -222,6 +224,14 @@ these backend env vars (see `backend/.env.example`):
 | `SMTP_PASS` | SMTP password/key. Falls back to `BREVO_SMTP_Key` when blank. |
 
 The e2e suite always forces `MAIL_TRANSPORT=log`, so tests never make network calls.
+
+## Audit Log & Activity Tracking
+
+Every mutating request (`POST`/`PATCH`/`PUT`/`DELETE`) is recorded by a global `AuditInterceptor`
+into an `AuditLog` table — capturing the actor (user id + email snapshot), the action
+(`CREATE`/`UPDATE`/`DELETE`), the entity, the request path, and the resulting status code. Reads are
+ignored to keep the log signal-rich, and the write is fire-and-forget so it can never break the
+request it records. Admins view it at `/audit` (paginated) or via `GET /api/audit-logs`.
 
 ## Security Notes
 

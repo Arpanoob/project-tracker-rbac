@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/projects', '/tasks', '/users'];
-const ADMIN_PREFIXES = ['/users'];
+const PROTECTED_PREFIXES = ['/dashboard', '/projects', '/tasks', '/users', '/audit'];
+const ADMIN_PREFIXES = ['/users', '/audit'];
 
 function decodeRole(token: string): string | null {
   try {
@@ -41,5 +41,12 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/projects/:path*', '/tasks/:path*', '/users/:path*', '/login'],
+  matcher: [
+    '/dashboard/:path*',
+    '/projects/:path*',
+    '/tasks/:path*',
+    '/users/:path*',
+    '/audit/:path*',
+    '/login',
+  ],
 };

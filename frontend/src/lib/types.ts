@@ -29,6 +29,25 @@ export interface Project {
   createdAt: string;
 }
 
+export interface Paginated<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AuditLog {
+  id: string;
+  userEmail: string | null;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  method: string;
+  path: string;
+  statusCode: number;
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
