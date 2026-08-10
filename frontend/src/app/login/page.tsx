@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { Spinner } from '@/components/spinner';
+import { PasswordInput } from '@/components/password-input';
 
 const DEMO_ACCOUNTS = [
   { role: 'Admin', email: 'admin@tracker.dev' },
@@ -28,6 +30,7 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const justReset = params.get('reset') === '1';
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -62,6 +65,11 @@ function LoginForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-4 p-6">
+          {justReset && (
+            <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              Password saved. Please sign in.
+            </div>
+          )}
           {error && (
             <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
           )}
@@ -85,10 +93,8 @@ function LoginForm() {
             <label className="label" htmlFor="password">
               Password
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              className="input"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
@@ -96,9 +102,21 @@ function LoginForm() {
             />
           </div>
 
-          <button type="submit" className="btn-primary w-full" disabled={submitting}>
+          <button
+            type="submit"
+            className="btn-primary flex w-full items-center justify-center gap-2"
+            disabled={submitting}
+          >
+            {submitting && <Spinner className="h-4 w-4" />}
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
+
+          <a
+            href="/forgot-password"
+            className="block text-center text-sm text-brand-600 underline"
+          >
+            Forgot password?
+          </a>
         </form>
 
         <div className="mt-6 card p-4">

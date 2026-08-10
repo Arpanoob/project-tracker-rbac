@@ -1,9 +1,19 @@
-import { Body, Controller, Get, HttpCode, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Res,
+} from '@nestjs/common';
 import { CookieOptions, Response } from 'express';
 import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { SetPasswordDto } from './dto/set-password.dto';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -30,6 +40,28 @@ export class AuthController {
     });
 
     return { user };
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(200)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    await this.authService.forgotPassword(dto.email);
+    return { message: 'If that email exists, a reset link has been sent.' };
+  }
+
+  @Public()
+  @Post('set-password')
+  @HttpCode(200)
+  async setPassword(@Body() dto: SetPasswordDto) {
+    await this.authService.setPassword(dto.token, dto.password);
+    return { message: 'Password set. You can now sign in.' };
+  }
+
+  @Public()
+  @Get('token/:token')
+  checkToken(@Param('token') token: string) {
+    return this.authService.checkToken(token);
   }
 
   @Post('logout')

@@ -5,7 +5,7 @@ A full-stack project tracker that demonstrates a real Role-Based Access Control 
 - **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind CSS
 - **Backend:** NestJS + TypeScript
 - **Database:** PostgreSQL via Prisma ORM
-- **Auth:** JWT stored in an `httpOnly` cookie, passwords hashed with bcrypt
+- **Auth:** JWT stored in an `httpOnly` cookie, passwords hashed with bcrypt. New users are onboarded by **email invite** (they set their own password), with a **forgot-password** reset flow.
 
 ---
 
@@ -181,9 +181,12 @@ All routes are prefixed with `/api`. Every route except `POST /auth/login` requi
 | `POST /auth/login` | Log in, sets the auth cookie | public |
 | `POST /auth/logout` | Clear the session | any |
 | `GET /auth/me` | Current user | any |
+| `POST /auth/forgot-password` | Request a reset link (always 200, no enumeration) | public |
+| `POST /auth/set-password` | Set a password using an invite/reset token | public |
+| `GET /auth/token/:token` | Check whether an invite/reset token is still valid | public |
 | `GET /users` | List users | Admin |
 | `GET /users/directory` | Minimal user list for assignment | Admin, Manager |
-| `POST /users` | Create user | Admin |
+| `POST /users` | Create user (sends an invite email; no password) | Admin |
 | `PATCH /users/:id` | Update user | Admin |
 | `DELETE /users/:id` | Delete user | Admin |
 | `GET /projects` | Projects visible to the caller | any |
@@ -200,10 +203,62 @@ All routes are prefixed with `/api`. Every route except `POST /auth/login` requi
 
 ---
 
+## Email invites & password reset
+
+Admins create users without a password. The API issues a single-use, SHA-256-hashed token
+(72h for invites, 1h for resets), emails a link, and the user sets their own password via
+`POST /auth/set-password`. Forgot-password works the same way and always returns 200 so it
+cannot be used to probe which emails exist.
+
+Email delivery is abstracted behind a `MailService` with a swappable transport, configured via
+these backend env vars (see `backend/.env.example`):
+
+| Var | Purpose |
+| --- | --- |
+| `MAIL_TRANSPORT` | `log` prints the link to the console (great for local dev); `smtp` sends for real. **Never use `log` in production.** |
+| `MAIL_FROM` | Sender address — must be a **verified sender** in your provider (e.g. Brevo). |
+| `SMTP_HOST` / `SMTP_PORT` | SMTP relay (Brevo: `smtp-relay.brevo.com` / `587`). |
+| `SMTP_USER` | SMTP login. |
+| `SMTP_PASS` | SMTP password/key. Falls back to `BREVO_SMTP_Key` when blank. |
+
+The e2e suite always forces `MAIL_TRANSPORT=log`, so tests never make network calls.
+
 ## Security Notes
 
 - Passwords are hashed with bcrypt and never returned by the API.
+- Invite/reset tokens are stored only as SHA-256 hashes; the raw token lives solely in the email link and is single-use.
 - The JWT is stored in an `httpOnly`, `sameSite=lax` cookie, so it is not readable by client-side JavaScript.
 - Every request body is validated with `class-validator` DTOs; unknown properties are rejected.
 - A global exception filter returns consistent error shapes and hides internal error details.
 - Authorization is always enforced on the server. The UI hides actions a role cannot perform, but the API is the source of truth.
+
+---
+
+## Assumptions & Design Decisions
+
+- **Two-layer authorization by design.** Role checks are declarative (`@Roles(...)` guard on
+  controllers), while ownership/membership rules are enforced in the service layer where the
+  record is loaded (e.g. a Manager may only edit projects they own; a Member may only change the
+  status of tasks assigned to them). This keeps coarse role gating separate from fine-grained,
+  data-dependent rules.
+- **JWT in an httpOnly cookie, not localStorage.** This protects the token from XSS. The
+  middleware reads the cookie for route protection; the API remains the source of truth.
+- **Server is authoritative; the UI is only a convenience.** The frontend hides actions a role
+  can't perform, but every request is independently authorized on the backend — hiding a button
+  is never treated as security.
+- **Invite-based onboarding instead of admin-set passwords.** Admins create users with only
+  name/email/role; the user sets their own password via a single-use, SHA-256-hashed email token
+  (72h invites, 1h resets). Admins never know a user's password. A forgot-password flow reuses the
+  same token primitive and never reveals whether an email exists (no user enumeration).
+- **Email is abstracted behind a swappable transport.** `MAIL_TRANSPORT=log` prints links to the
+  console for local dev and tests (no network); `smtp` sends via Nodemailer/Brevo in production —
+  changing provider is an env-var change, not a code change.
+- **Prisma + PostgreSQL** for a typed schema, explicit relations, and migration history. `onDelete`
+  rules keep referential integrity (e.g. deleting a project cascades its tasks; deleting an
+  assignee nulls the task's `assigneeId`).
+- **Roles are fixed** (`ADMIN`, `MANAGER`, `MEMBER`) rather than a dynamic permissions table —
+  appropriate for the assessment's scope and far easier to reason about and test. A
+  permissions-per-role table would be the next step if roles needed to be user-configurable.
+- **Same codebase for all environments.** Cookie/CORS behavior keys off `NODE_ENV` (`SameSite=Lax`
+  locally, `SameSite=None; Secure` + `trust proxy` in production) so no code changes are needed
+  between local and deployed setups.

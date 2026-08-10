@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
+import { Spinner } from '@/components/spinner';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import type { Role, User } from '@/lib/types';
@@ -13,11 +14,10 @@ const ROLES: Role[] = ['ADMIN', 'MANAGER', 'MEMBER'];
 interface FormState {
   name: string;
   email: string;
-  password: string;
   role: Role;
 }
 
-const emptyForm: FormState = { name: '', email: '', password: '', role: 'MEMBER' };
+const emptyForm: FormState = { name: '', email: '', role: 'MEMBER' };
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
@@ -27,6 +27,8 @@ export default function UsersPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [invitingId, setInvitingId] = useState<string | null>(null);
 
   async function load() {
     const data = await api.get<User[]>('/users');
@@ -45,7 +47,7 @@ export default function UsersPage() {
   }
 
   function openEdit(user: User) {
-    setForm({ name: user.name, email: user.email, password: '', role: user.role });
+    setForm({ name: user.name, email: user.email, role: user.role });
     setError(null);
     setModal({ open: true, editing: user });
   }
@@ -56,15 +58,17 @@ export default function UsersPage() {
     setSaving(true);
     try {
       if (modal.editing) {
-        const body: Partial<FormState> = {
+        await api.patch(`/users/${modal.editing.id}`, {
           name: form.name,
           email: form.email,
           role: form.role,
-        };
-        if (form.password) body.password = form.password;
-        await api.patch(`/users/${modal.editing.id}`, body);
+        });
       } else {
-        await api.post('/users', form);
+        await api.post('/users', {
+          name: form.name,
+          email: form.email,
+          role: form.role,
+        });
       }
       setModal({ open: false });
       await load();
@@ -75,13 +79,28 @@ export default function UsersPage() {
     }
   }
 
+  async function handleResendInvite(user: User) {
+    setInvitingId(user.id);
+    try {
+      await api.post(`/users/${user.id}/resend-invite`);
+      alert(`Invite re-sent to ${user.email}`);
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'Unable to resend invite');
+    } finally {
+      setInvitingId(null);
+    }
+  }
+
   async function handleDelete(user: User) {
     if (!confirm(`Delete ${user.name}?`)) return;
+    setDeletingId(user.id);
     try {
       await api.delete(`/users/${user.id}`);
       await load();
     } catch (err) {
       alert(err instanceof ApiError ? err.message : 'Unable to delete user');
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -98,7 +117,10 @@ export default function UsersPage() {
       />
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading…</p>
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <Spinner className="h-4 w-4" />
+          Loading…
+        </div>
       ) : (
         <div className="card overflow-hidden">
           <table className="w-full text-left text-sm">
@@ -119,6 +141,9 @@ export default function UsersPage() {
                         {initials(user.name)}
                       </div>
                       <span className="font-medium">{user.name}</span>
+                      {user.pending && (
+                        <span className="badge bg-amber-100 text-amber-700">Pending</span>
+                      )}
                     </div>
                   </td>
                   <td className="hidden px-4 py-3 text-slate-500 sm:table-cell">{user.email}</td>
@@ -127,6 +152,22 @@ export default function UsersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      {user.pending && (
+                        <button
+                          className="btn-ghost !px-2 !py-1 text-sm disabled:opacity-40"
+                          onClick={() => handleResendInvite(user)}
+                          disabled={invitingId === user.id}
+                        >
+                          {invitingId === user.id ? (
+                            <span className="flex items-center gap-1.5">
+                              <Spinner className="h-3.5 w-3.5" />
+                              Sending…
+                            </span>
+                          ) : (
+                            'Resend invite'
+                          )}
+                        </button>
+                      )}
                       <button
                         className="btn-ghost !px-2 !py-1 text-sm"
                         onClick={() => openEdit(user)}
@@ -136,9 +177,16 @@ export default function UsersPage() {
                       <button
                         className="btn-danger !px-2 !py-1 text-sm disabled:opacity-40"
                         onClick={() => handleDelete(user)}
-                        disabled={user.id === currentUser?.id}
+                        disabled={user.id === currentUser?.id || deletingId === user.id}
                       >
-                        Delete
+                        {deletingId === user.id ? (
+                          <span className="flex items-center gap-1.5">
+                            <Spinner className="h-3.5 w-3.5" />
+                            Deleting…
+                          </span>
+                        ) : (
+                          'Delete'
+                        )}
                       </button>
                     </div>
                   </td>
@@ -178,19 +226,11 @@ export default function UsersPage() {
               required
             />
           </div>
-          <div>
-            <label className="label">
-              Password {modal.editing && <span className="text-slate-400">(leave blank to keep)</span>}
-            </label>
-            <input
-              type="password"
-              className="input"
-              value={form.password}
-              onChange={(event) => setForm({ ...form, password: event.target.value })}
-              required={!modal.editing}
-              minLength={form.password ? 8 : undefined}
-            />
-          </div>
+          {!modal.editing && (
+            <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-700">
+              An invite email will be sent so they can set their own password.
+            </p>
+          )}
           <div>
             <label className="label">Role</label>
             <select
@@ -209,7 +249,12 @@ export default function UsersPage() {
             <button type="button" className="btn-ghost" onClick={() => setModal({ open: false })}>
               Cancel
             </button>
-            <button type="submit" className="btn-primary" disabled={saving}>
+            <button
+              type="submit"
+              className="btn-primary flex items-center gap-2"
+              disabled={saving}
+            >
+              {saving && <Spinner className="h-4 w-4" />}
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>

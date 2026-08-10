@@ -11,6 +11,10 @@ import { PrismaService } from '../src/prisma/prisma.service';
 export const PASSWORD = 'Password123!';
 
 export async function createTestApp(): Promise<{ app: INestApplication; prisma: PrismaService }> {
+  // Keep the suite offline regardless of the .env MAIL_TRANSPORT value.
+  // dotenv/@nestjs/config will not overwrite an already-set process.env var.
+  process.env.MAIL_TRANSPORT = 'log';
+
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
@@ -33,6 +37,7 @@ export async function resetDatabase(prisma: PrismaService) {
   await prisma.task.deleteMany();
   await prisma.projectMember.deleteMany();
   await prisma.project.deleteMany();
+  await prisma.passwordToken.deleteMany();
   await prisma.user.deleteMany();
 }
 

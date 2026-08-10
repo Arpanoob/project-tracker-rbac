@@ -87,7 +87,7 @@ describe('RBAC (e2e)', () => {
       return server()
         .post('/api/users')
         .set('Cookie', adminCookie)
-        .send({ name: 'New Person', email: 'new@test.dev', password: 'Password123!', role: 'MEMBER' })
+        .send({ name: 'New Person', email: 'new@test.dev', role: 'MEMBER' })
         .expect(201);
     });
 
@@ -95,7 +95,7 @@ describe('RBAC (e2e)', () => {
       return server()
         .post('/api/users')
         .set('Cookie', adminCookie)
-        .send({ name: 'x', email: 'not-an-email', password: 'short', role: 'MEMBER' })
+        .send({ name: 'x', email: 'not-an-email', role: 'MEMBER' })
         .expect(400);
     });
 
@@ -106,7 +106,6 @@ describe('RBAC (e2e)', () => {
         .send({
           name: 'New Person',
           email: 'extra@test.dev',
-          password: 'Password123!',
           role: 'MEMBER',
           isSuperuser: true,
         })
