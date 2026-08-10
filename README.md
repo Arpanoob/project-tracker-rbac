@@ -5,7 +5,7 @@ A full-stack project tracker that demonstrates a real Role-Based Access Control 
 - **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind CSS
 - **Backend:** NestJS + TypeScript
 - **Database:** PostgreSQL via Prisma ORM
-- **Auth:** JWT stored in an `httpOnly` cookie, passwords hashed with bcrypt
+- **Auth:** JWT stored in an `httpOnly` cookie, passwords hashed with bcrypt. New users are onboarded by **email invite** (they set their own password), with a **forgot-password** reset flow.
 
 ---
 
@@ -181,9 +181,12 @@ All routes are prefixed with `/api`. Every route except `POST /auth/login` requi
 | `POST /auth/login` | Log in, sets the auth cookie | public |
 | `POST /auth/logout` | Clear the session | any |
 | `GET /auth/me` | Current user | any |
+| `POST /auth/forgot-password` | Request a reset link (always 200, no enumeration) | public |
+| `POST /auth/set-password` | Set a password using an invite/reset token | public |
+| `GET /auth/token/:token` | Check whether an invite/reset token is still valid | public |
 | `GET /users` | List users | Admin |
 | `GET /users/directory` | Minimal user list for assignment | Admin, Manager |
-| `POST /users` | Create user | Admin |
+| `POST /users` | Create user (sends an invite email; no password) | Admin |
 | `PATCH /users/:id` | Update user | Admin |
 | `DELETE /users/:id` | Delete user | Admin |
 | `GET /projects` | Projects visible to the caller | any |
@@ -200,9 +203,30 @@ All routes are prefixed with `/api`. Every route except `POST /auth/login` requi
 
 ---
 
+## Email invites & password reset
+
+Admins create users without a password. The API issues a single-use, SHA-256-hashed token
+(72h for invites, 1h for resets), emails a link, and the user sets their own password via
+`POST /auth/set-password`. Forgot-password works the same way and always returns 200 so it
+cannot be used to probe which emails exist.
+
+Email delivery is abstracted behind a `MailService` with a swappable transport, configured via
+these backend env vars (see `backend/.env.example`):
+
+| Var | Purpose |
+| --- | --- |
+| `MAIL_TRANSPORT` | `log` prints the link to the console (great for local dev); `smtp` sends for real. **Never use `log` in production.** |
+| `MAIL_FROM` | Sender address — must be a **verified sender** in your provider (e.g. Brevo). |
+| `SMTP_HOST` / `SMTP_PORT` | SMTP relay (Brevo: `smtp-relay.brevo.com` / `587`). |
+| `SMTP_USER` | SMTP login. |
+| `SMTP_PASS` | SMTP password/key. Falls back to `BREVO_SMTP_Key` when blank. |
+
+The e2e suite always forces `MAIL_TRANSPORT=log`, so tests never make network calls.
+
 ## Security Notes
 
 - Passwords are hashed with bcrypt and never returned by the API.
+- Invite/reset tokens are stored only as SHA-256 hashes; the raw token lives solely in the email link and is single-use.
 - The JWT is stored in an `httpOnly`, `sameSite=lax` cookie, so it is not readable by client-side JavaScript.
 - Every request body is validated with `class-validator` DTOs; unknown properties are rejected.
 - A global exception filter returns consistent error shapes and hides internal error details.
