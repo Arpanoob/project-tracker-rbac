@@ -231,3 +231,34 @@ The e2e suite always forces `MAIL_TRANSPORT=log`, so tests never make network ca
 - Every request body is validated with `class-validator` DTOs; unknown properties are rejected.
 - A global exception filter returns consistent error shapes and hides internal error details.
 - Authorization is always enforced on the server. The UI hides actions a role cannot perform, but the API is the source of truth.
+
+---
+
+## Assumptions & Design Decisions
+
+- **Two-layer authorization by design.** Role checks are declarative (`@Roles(...)` guard on
+  controllers), while ownership/membership rules are enforced in the service layer where the
+  record is loaded (e.g. a Manager may only edit projects they own; a Member may only change the
+  status of tasks assigned to them). This keeps coarse role gating separate from fine-grained,
+  data-dependent rules.
+- **JWT in an httpOnly cookie, not localStorage.** This protects the token from XSS. The
+  middleware reads the cookie for route protection; the API remains the source of truth.
+- **Server is authoritative; the UI is only a convenience.** The frontend hides actions a role
+  can't perform, but every request is independently authorized on the backend — hiding a button
+  is never treated as security.
+- **Invite-based onboarding instead of admin-set passwords.** Admins create users with only
+  name/email/role; the user sets their own password via a single-use, SHA-256-hashed email token
+  (72h invites, 1h resets). Admins never know a user's password. A forgot-password flow reuses the
+  same token primitive and never reveals whether an email exists (no user enumeration).
+- **Email is abstracted behind a swappable transport.** `MAIL_TRANSPORT=log` prints links to the
+  console for local dev and tests (no network); `smtp` sends via Nodemailer/Brevo in production —
+  changing provider is an env-var change, not a code change.
+- **Prisma + PostgreSQL** for a typed schema, explicit relations, and migration history. `onDelete`
+  rules keep referential integrity (e.g. deleting a project cascades its tasks; deleting an
+  assignee nulls the task's `assigneeId`).
+- **Roles are fixed** (`ADMIN`, `MANAGER`, `MEMBER`) rather than a dynamic permissions table —
+  appropriate for the assessment's scope and far easier to reason about and test. A
+  permissions-per-role table would be the next step if roles needed to be user-configurable.
+- **Same codebase for all environments.** Cookie/CORS behavior keys off `NODE_ENV` (`SameSite=Lax`
+  locally, `SameSite=None; Secure` + `trust proxy` in production) so no code changes are needed
+  between local and deployed setups.
