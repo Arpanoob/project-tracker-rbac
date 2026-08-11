@@ -39,7 +39,7 @@ function LoginForm() {
 
     try {
       await login(email, password);
-      router.replace(params.get('from') ?? '/dashboard');
+      router.replace('/dashboard');
       router.refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Unable to sign in');
