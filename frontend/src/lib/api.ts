@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+// Same-origin by default; a Next.js rewrite (see next.config.mjs) proxies
+// `/api/*` to the backend so the auth cookie stays first-party.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
 export class ApiError extends Error {
   status: number;
