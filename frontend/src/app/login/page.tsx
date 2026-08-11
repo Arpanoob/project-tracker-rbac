@@ -7,12 +7,6 @@ import { useAuth } from '@/lib/auth-context';
 import { Spinner } from '@/components/spinner';
 import { PasswordInput } from '@/components/password-input';
 
-const DEMO_ACCOUNTS = [
-  { role: 'Admin', email: 'admin@tracker.dev' },
-  { role: 'Manager', email: 'manager@tracker.dev' },
-  { role: 'Member', email: 'member@tracker.dev' },
-];
-
 export default function LoginPage() {
   return (
     <Suspense>
@@ -46,11 +40,6 @@ function LoginForm() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function fillDemo(demoEmail: string) {
-    setEmail(demoEmail);
-    setPassword('Password123!');
   }
 
   return (
@@ -118,25 +107,6 @@ function LoginForm() {
             Forgot password?
           </a>
         </form>
-
-        <div className="mt-6 card p-4">
-          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-400">
-            Demo accounts · password Password123!
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {DEMO_ACCOUNTS.map((account) => (
-              <button
-                key={account.email}
-                type="button"
-                onClick={() => fillDemo(account.email)}
-                className="btn-ghost flex-col !items-start !py-2 text-left"
-              >
-                <span className="text-xs font-semibold">{account.role}</span>
-                <span className="truncate text-[11px] text-slate-400">{account.email}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
