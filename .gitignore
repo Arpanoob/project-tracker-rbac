@@ -16,3 +16,6 @@ skills-lock.json
 
 # Local scratch file holding a GitHub token — must never be committed. Revoke & remove.
 /github
+
+# Local-only planning docs (not published)
+docs/superpowers/
